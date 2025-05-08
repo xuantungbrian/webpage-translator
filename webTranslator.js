@@ -12,7 +12,7 @@ async function captureScreenshot(url, imagePath, options = {}) {
     // Set default options or use provided ones
     const {
       waitUntil = 'networkidle2',
-      delay = 60000,
+      delay = 100000,
       fullPage = true,
       viewport = { width: 1280, height: 800 },
       puppeteerLaunchOptions = { headless: 'new' },
@@ -59,16 +59,20 @@ async function extractChineseText(imagePath) {
 
 // Translate using LibreTranslate
 async function translateToEnglish(text) {
-  const response = await axios.post(process.env.TRANSLATOR_URL, {
-    q: text,
-    source: 'zh',
-    target: 'en',
-    format: 'text'
-  }, {
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  return response.data.translatedText;
+  try {
+    const response = await axios.post(process.env.TRANSLATOR_URL, {
+      q: text,
+      source: 'zh',
+      target: 'en',
+      format: 'text'
+    }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data.translatedText;
+  } catch(err) {
+    console.log(err.response.data.error)
+    return
+  }  
 }
 
 // Main code
@@ -81,10 +85,18 @@ async function translateToEnglish(text) {
 
   console.log('Extracting text...');
   const chineseText = await extractChineseText(screenshotPath);
-
+  if (!chineseText) {
+    console.log("Cannot extract any text, please check the image for more information")
+    return
+  }
+  
   console.log('Translating text...');
   const englishText = await translateToEnglish(chineseText);
-
+  if (!englishText) {
+    console.log("Cannot translate any text, please check the image for more information")
+    return
+  }
+  
   fs.writeFileSync('translated_chapter.txt', englishText);
   console.log('✅ Translation saved to translated_chapter.txt');
 })();
