@@ -1,0 +1,1 @@
+Main idea is taking screenshot from the page, identify the content and translate it
