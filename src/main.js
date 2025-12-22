@@ -1,36 +1,77 @@
-const fs = require('fs');
-const dotenv = require('dotenv')
-dotenv.config({ path: './config/.env' })
-const Screenshot = require('./screenshot')
-const OCR = require('./ocr')
-const Translator = require('./translator');
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { writeFile } from 'node:fs/promises';
+import Utils from './services/utils.js';
+import Translator from './services/translator.js';
+import dotenv from 'dotenv';
 
-const screenshot = new Screenshot();
-const ocr = new OCR();
-const translator = new Translator();
+dotenv.config({ path: './config/.env' });
 
-(async () => {
-  const targetUrl = process.env.TARGET_URL;
-  const screenshotPath = 'chapter.png';
-  console.log(targetUrl)
+puppeteer.use(StealthPlugin());
 
-  console.log('Capturing screenshot...');
-  await screenshot.captureScreenshot(targetUrl, screenshotPath);
+async function extractNovelText(url) {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    const utils = new Utils();
+    const translator = new Translator();
 
-  console.log('Extracting text...');
-  const chineseText = await ocr.extractChineseText(screenshotPath);
-  if (!chineseText) {
-    console.log("Cannot extract any text, please check the image for more information")
-    return
-  }
-  
-  console.log('Translating text...');
-  const englishText = await translator.translateToEnglish(chineseText);
-  if (!englishText) {
-    console.log("Cannot translate any text, please check the image for more information")
-    return
-  }
-  
-  fs.writeFileSync('translated_chapter.txt', englishText);
-  console.log('✅ Translation saved to translated_chapter.txt');
-})();
+    try {
+        await page.goto(url, { waitUntil: 'networkidle2' });
+
+        // Wait for the reader content to actually appear
+        await page.waitForSelector('.muye-reader-content', { timeout: 10000 });
+
+        const novelData = await page.evaluate(() => {
+            // 1. Target the main content area using the class that is likely stable
+            const container = document.querySelector('.muye-reader-content');
+            
+            if (!container) return "Content not found";
+
+            // 2. Get all <p> tags inside
+            const paragraphs = Array.from(container.querySelectorAll('p'));
+
+            // 3. Map to text, trimming whitespace and filtering out empty lines
+            // This also helps if they inject empty <p> tags as "noise"
+            return paragraphs
+                .map(p => p.innerText.trim())
+                .filter(text => text.length > 0)
+                .join('\n\n'); 
+        });
+        
+        
+        // 2. Split into chunks (approx 5000 chars each)
+        const chunks = utils.chunkText(novelData, 5000);
+        console.log(`Split into ${chunks.length} chunks. Starting translation...`);
+
+        let finalTranslation = "";
+
+        // 3. Translate each chunk sequentially
+        for (let i = 0; i < chunks.length; i++) {
+            console.log(`Translate Progress: ${i + 1}/${chunks.length}...`);
+            
+            const translatedChunk = await translator.translate(chunks[i]);
+            
+            if (translatedChunk) {
+                finalTranslation += translatedChunk + "\n\n";
+            }
+            
+            // Brief pause to avoid rate limits on the free tier
+            await utils.sleep(10000); 
+        }
+
+        console.log("All chunks translated!");
+        
+        const fileName = 'output/translated_novel.txt';
+        
+        // Write the final translation to the file
+        // The 'utf8' encoding ensures characters are saved correctly
+        await writeFile(fileName, finalTranslation, 'utf8');
+        
+        console.log(`Translation saved to ${fileName}`);
+    } catch (error) {
+        console.error("Translation failed:", error);
+    }
+}
+
+
+extractNovelText(process.env.TARGET_URL);
