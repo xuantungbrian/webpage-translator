@@ -1,0 +1,19 @@
+.chapter-content {
+  font-size: 25px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.chapter-content button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #00d2ff;
+  border: 1px solid rgba(0, 210, 255, 0.3);
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
