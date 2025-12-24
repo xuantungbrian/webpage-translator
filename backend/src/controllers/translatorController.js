@@ -6,7 +6,6 @@ const translateChapter = async (req, res) => {
         const url = `https://www.69shuba.com/txt/${bookId}/${chapterId}`;
         const rawText = await translatorService.getText(url);
         const translatedText = await translatorService.translate(rawText);
-        console.log(translatedText)
         res.status(200).json({
             success: true,
             data: translatedText

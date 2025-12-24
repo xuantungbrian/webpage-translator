@@ -42,9 +42,7 @@ class translatorService {
     async geminiTranslate(text) {
         try {
             const result = await this.model.generateContent(text);
-            console.log(result)
             const response = result.response;
-            console.log(response)
             return response.text();
         } catch (error) {
             console.error("Translation Error:", error);
@@ -55,7 +53,6 @@ class translatorService {
     async translate(rawText) {
         const chunks = this.utils.chunkText(rawText, 5000);
         let finalTranslation = "";
-        console.log("Here")
         for (let i = 0; i < chunks.length; i++) {
             const translatedChunk = await this.geminiTranslate(chunks[i]);
             if (translatedChunk) {
