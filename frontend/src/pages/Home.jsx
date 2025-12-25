@@ -3,9 +3,9 @@ import './Home.css'
 
 const Home = () => {
   const [chapterContent, setChapterContent] = useState('Loading')
-  const [chapterId, setChapterId] = useState(26129007)
+  const [chapterId, setChapterId] = useState(26129021)
 
-  const handleClick = (chapterId) => {
+  const handleClick = () => {
     setChapterId(chapterId => chapterId + 2)
     setChapterContent('Loading')
   }
